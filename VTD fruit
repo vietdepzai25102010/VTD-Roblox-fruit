@@ -1,0 +1,237 @@
+-- Auto Fruit + GUI Futuristic + Bảng thống kê + Legend
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- Cấu hình
+local AutoPickup = true
+local ServerHopTime = 7
+local ScanInterval = 0.2
+
+-- Biến thống kê
+local stats = { Common = 0, Uncommon = 0, Rare = 0, Mythic = 0, Legend = 0 }
+local startTime = os.time()
+
+-- GUI chính
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "VTD Roblox" -- đổi tên GUI
+
+-- Khung Futuristic chính
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0,300,0,180)
+Frame.Position = UDim2.new(0,20,0,20)
+Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0,15)
+UICorner.Parent = Frame
+
+-- Viền neon nhấp nháy
+local Border = Instance.new("Frame")
+Border.Size = UDim2.new(1,6,1,6)
+Border.Position = UDim2.new(0,-3,0,-3)
+Border.BackgroundColor3 = Color3.fromRGB(0,255,255)
+Border.BorderSizePixel = 0
+Border.ZIndex = 0
+Border.Parent = Frame
+
+local BorderCorner = Instance.new("UICorner")
+BorderCorner.CornerRadius = UDim.new(0,18)
+BorderCorner.Parent = Border
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,0,0,30)
+Title.Position = UDim2.new(0,0,0,0)
+Title.BackgroundTransparency = 1
+Title.Text = "VTD Roblox"
+Title.TextColor3 = Color3.fromRGB(0,255,255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.Parent = Frame
+
+-- Nút toggle
+local toggle = Instance.new("TextButton")
+toggle.Size = UDim2.new(0,200,0,40)
+toggle.Position = UDim2.new(0.5,-100,0,50)
+toggle.Text = "Tắt Auto Fruit"
+toggle.Font = Enum.Font.GothamBold
+toggle.TextSize = 16
+toggle.TextColor3 = Color3.fromRGB(0,255,255)
+toggle.BackgroundColor3 = Color3.fromRGB(20,20,20)
+toggle.BorderSizePixel = 0
+toggle.Parent = Frame
+
+local cornerBtn = Instance.new("UICorner")
+cornerBtn.CornerRadius = UDim.new(0,12)
+cornerBtn.Parent = toggle
+
+-- Hover effect
+toggle.MouseEnter:Connect(function()
+    toggle.BackgroundColor3 = Color3.fromRGB(0,50,50)
+end)
+toggle.MouseLeave:Connect(function()
+    toggle.BackgroundColor3 = Color3.fromRGB(20,20,20)
+end)
+
+-- Info label chính
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Size = UDim2.new(1,0,0,50)
+InfoLabel.Position = UDim2.new(0,0,0,110)
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Text = "Auto Fruit đang hoạt động..."
+InfoLabel.TextColor3 = Color3.fromRGB(0,255,255)
+InfoLabel.Font = Enum.Font.Gotham
+InfoLabel.TextSize = 16
+InfoLabel.TextWrapped = true
+InfoLabel.Parent = Frame
+
+-- Bảng thống kê bên phải
+local StatsFrame = Instance.new("Frame")
+StatsFrame.Size = UDim2.new(0,220,0,200)
+StatsFrame.Position = UDim2.new(1,-230,0,20) -- cách mép phải 10px
+StatsFrame.AnchorPoint = Vector2.new(0,0)
+StatsFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+StatsFrame.BorderSizePixel = 0
+StatsFrame.Parent = ScreenGui
+
+local StatsCorner = Instance.new("UICorner")
+StatsCorner.CornerRadius = UDim.new(0,12)
+StatsCorner.Parent = StatsFrame
+
+local StatsTitle = Instance.new("TextLabel")
+StatsTitle.Size = UDim2.new(1,0,0,30)
+StatsTitle.Position = UDim2.new(0,0,0,0)
+StatsTitle.BackgroundTransparency = 1
+StatsTitle.Text = "Thống kê Auto Fruit"
+StatsTitle.TextColor3 = Color3.fromRGB(0,255,255)
+StatsTitle.Font = Enum.Font.GothamBold
+StatsTitle.TextSize = 16
+StatsTitle.Parent = StatsFrame
+
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.new(1,0,1,-30)
+StatsLabel.Position = UDim2.new(0,0,0,30)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.TextColor3 = Color3.fromRGB(0,255,255)
+StatsLabel.Font = Enum.Font.Gotham
+StatsLabel.TextSize = 14
+StatsLabel.TextWrapped = true
+StatsLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatsLabel.Text = ""
+StatsLabel.Parent = StatsFrame
+
+-- Nhấp nháy viền neon
+spawn(function()
+    local colors = {Color3.fromRGB(0,255,255), Color3.fromRGB(255,0,255), Color3.fromRGB(255,255,0)}
+    local i = 1
+    while true do
+        Border.BackgroundColor3 = colors[i]
+        i = i + 1
+        if i > #colors then i = 1 end
+        wait(0.5)
+    end
+end)
+
+-- Lấy fruit trong map
+local function getAllFruits()
+    local fruits = {}
+    for _, obj in pairs(Workspace:GetChildren()) do
+        if obj:IsA("Tool") and obj.Name:match("Fruit") then
+            table.insert(fruits, obj)
+        end
+    end
+    return fruits
+end
+
+-- Phân loại fruit theo rarity
+local function getFruitRarity(fruit)
+    local name = fruit.Name:lower()
+    if name:match("common") then return "Common"
+    elseif name:match("uncommon") then return "Uncommon"
+    elseif name:match("rare") then return "Rare"
+    elseif name:match("mythic") then return "Mythic"
+    elseif name:match("legend") then return "Legend"
+    else return "Common"
+    end
+end
+
+-- Nhặt fruit vào kho
+local function pickupFruit(fruit)
+    if fruit and fruit.Parent then
+        hrp.CFrame = fruit.Handle.CFrame + Vector3.new(0,3,0)
+        wait(0.2)
+        local remote = ReplicatedStorage:FindFirstChild("RemoteEvents")
+        if remote and remote:FindFirstChild("PickUpFruit") then
+            remote.PickUpFruit:FireServer(fruit)
+        end
+        local rarity = getFruitRarity(fruit)
+        stats[rarity] = stats[rarity] + 1
+        fruit:Destroy()
+    end
+end
+
+-- Update bảng thống kê
+local function updateStats()
+    local timeRunning = os.time() - startTime
+    local minutes = math.floor(timeRunning/60)
+    local seconds = timeRunning % 60
+    StatsLabel.Text = string.format(
+        "Thời gian treo: %02d:%02d\nCommon: %d\nUncommon: %d\nRare: %d\nMythic: %d\nLegend: %d\n\nCảm ơn bạn đã dùng script!",
+        minutes, seconds, stats.Common, stats.Uncommon, stats.Rare, stats.Mythic, stats.Legend
+    )
+end
+
+-- Auto pickup liên tục + cập nhật bảng
+spawn(function()
+    while true do
+        if AutoPickup then
+            local fruits = getAllFruits()
+            if #fruits == 0 then
+                InfoLabel.Text = "Không phát hiện fruit, hop server trong "..ServerHopTime.." giây..."
+                wait(ServerHopTime)
+                TeleportService:Teleport(game.PlaceId, player)
+            else
+                for _, fruit in pairs(fruits) do
+                    InfoLabel.Text = "Phát hiện fruit: "..fruit.Name
+                    pickupFruit(fruit)
+                    wait(ScanInterval)
+                end
+            end
+        end
+        updateStats()
+        wait(0.5)
+    end
+end)
+
+-- Toggle AutoFruit
+toggle.MouseButton1Click:Connect(function()
+    AutoPickup = not AutoPickup
+    if AutoPickup then
+        toggle.Text = "Tắt Auto Fruit"
+        toggle.BackgroundColor3 = Color3.fromRGB(100,30,30)
+        InfoLabel.Text = "Auto Fruit đang hoạt động..."
+    else
+        toggle.Text = "Bật Auto Fruit"
+        toggle.BackgroundColor3 = Color3.fromRGB(60,60,60)
+        InfoLabel.Text = "Auto Fruit đã tắt"
+    end
+end)
+
+-- Tự bật lại sau hop server
+player.OnTeleport:Connect(function(State)
+    if State == Enum.TeleportState.Teleported then
+        wait(5)
+        -- Nếu script online: loadstring(game:HttpGet("URL_SCRIPT"))()
+    end
+end)
