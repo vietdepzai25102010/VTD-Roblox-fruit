@@ -6,10 +6,41 @@ local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- Hàm hop server
+local function HopServer()
+    local placeId = game.PlaceId
+    local servers = {}
+    local cursor = ""
+    local success, result
+
+    repeat
+        success, result = pcall(function()
+            return HttpService:JSONDecode(
+                game:HttpGet("https://games.roblox.com/v1/games/"..placeId.."/servers/Public?sortOrder=Asc&limit=100"..(cursor ~= "" and "&cursor="..cursor or ""))
+            )
+        end)
+        if success and result and result.data then
+            for _, v in pairs(result.data) do
+                if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                    table.insert(servers, v.id)
+                end
+            end
+            cursor = result.nextPageCursor or ""
+        end
+    until cursor == "" or not success
+
+    if #servers > 0 then
+        TeleportService:TeleportToPlaceInstance(placeId, servers[math.random(1, #servers)], player)
+    else
+        TeleportService:Teleport(placeId, player) -- fallback nếu không tìm được server khác
+    end
+end
 
 -- Anti cheat / anti reset / anti văng
 local function protectPlayer()
@@ -20,7 +51,7 @@ local function protectPlayer()
     Players.PlayerRemoving:Connect(function(plr)
         if plr == player then
             wait(2)
-            TeleportService:Teleport(game.PlaceId, player)
+            HopServer()
         end
     end)
     player.OnTeleport:Connect(function(state)
@@ -236,7 +267,7 @@ function initVTD()
                 if #fruits == 0 then
                     InfoLabel.Text = "Không phát hiện fruit, hop server trong "..ServerHopTime.." giây..."
                     wait(ServerHopTime)
-                    TeleportService:Teleport(game.PlaceId, player)
+                    HopServer() -- dùng hop server thay rejoin
                 else
                     for _, fruit in pairs(fruits) do
                         InfoLabel.Text = "Phát hiện fruit: "..fruit.Name
